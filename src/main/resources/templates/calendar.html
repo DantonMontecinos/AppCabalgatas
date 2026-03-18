@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario - Gestión de Cabalgatas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary:#0f1923;--bg-secondary:#1a2736;--bg-card:#1e2d3d;
+            --bg-hover:#243447;--accent-green:#22c55e;--accent-green-dark:#16a34a;
+            --accent-blue:#3b82f6;--accent-amber:#f59e0b;--accent-red:#ef4444;
+            --text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;
+            --border-color:#2d4155;--shadow-glow:0 0 20px rgba(34,197,94,0.15);
+        }
+        *{box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--text-primary);margin:0;min-height:100vh}
+        .sidebar{position:fixed;top:0;left:0;width:260px;height:100vh;background:var(--bg-secondary);border-right:1px solid var(--border-color);z-index:1000;display:flex;flex-direction:column}
+        .sidebar-brand{padding:24px 20px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;gap:12px}
+        .sidebar-brand .brand-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent-green),var(--accent-blue));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
+        .sidebar-brand h5{margin:0;font-weight:700;font-size:16px}
+        .sidebar-brand small{font-size:11px;color:var(--text-muted)}
+        .sidebar-nav{flex:1;padding:16px 12px}
+        .sidebar-nav .nav-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);padding:12px 12px 6px}
+        .sidebar-nav a{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;color:var(--text-secondary);text-decoration:none;font-size:14px;font-weight:500;transition:all 0.2s;margin-bottom:2px}
+        .sidebar-nav a:hover{background:var(--bg-hover);color:var(--text-primary)}
+        .sidebar-nav a.active{background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(59,130,246,0.1));color:var(--accent-green);box-shadow:var(--shadow-glow)}
+        .sidebar-nav a i{font-size:18px;width:24px;text-align:center}
+        .main-content{margin-left:260px;padding:24px 32px;min-height:100vh}
+        .form-control-dark,.form-select-dark{background:var(--bg-primary);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;padding:10px 14px;font-size:14px}
+        .form-control-dark:focus,.form-select-dark:focus{background:var(--bg-primary);border-color:var(--accent-green);color:var(--text-primary);box-shadow:0 0 0 3px rgba(34,197,94,0.15)}
+        .form-label{font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+        .btn-accent{background:linear-gradient(135deg,var(--accent-green),var(--accent-green-dark));color:white;border:none;padding:10px 20px;border-radius:10px;font-weight:600;font-size:14px;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px}
+        .btn-accent:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(34,197,94,0.35);color:white}
+        .btn-ghost{background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border-color);padding:8px 16px;border-radius:8px;font-weight:500;font-size:13px}
+        .btn-ghost:hover{background:var(--bg-secondary);color:var(--text-primary)}
+        .btn-danger-soft{background:rgba(239,68,68,0.1);color:var(--accent-red);border:1px solid rgba(239,68,68,0.2);padding:8px 16px;border-radius:8px;font-weight:500;font-size:13px}
+        .btn-danger-soft:hover{background:rgba(239,68,68,0.2);color:var(--accent-red)}
+        .modal-content{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;color:var(--text-primary)}
+        .modal-header{border-bottom:1px solid var(--border-color);padding:20px 24px}
+        .modal-header .modal-title{font-weight:700;font-size:18px}
+        .modal-body{padding:24px}
+        .modal-footer{border-top:1px solid var(--border-color);padding:16px 24px}
+        .btn-close{filter:invert(1) grayscale(100%) brightness(200%)}
+        .toast-container{position:fixed;top:20px;right:20px;z-index:9999}
+        .toast-custom{background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;color:var(--text-primary);box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+        .toast-custom.toast-success{border-left:4px solid var(--accent-green)}
+        .toast-custom.toast-error{border-left:4px solid var(--accent-red)}
+        .stat-card{background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px 16px;text-align:center}
+        .stat-card .stat-value{font-size:20px;font-weight:700}
+        .stat-card .stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px}
+        .tab-btn{padding:8px 16px;border:none;background:none;color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s}
+        .tab-btn.active{color:var(--accent-green);border-bottom-color:var(--accent-green)}
+        .tab-btn:hover{color:var(--text-primary)}
+        .tab-panel{display:none}
+        .tab-panel.active{display:block}
+        .estado-btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s}
+        .estado-btn:hover{transform:translateY(-1px);filter:brightness(1.1)}
+        .badge-estado{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .animate-in{animation:fadeInUp 0.3s ease forwards}
+        /* FullCalendar dark theme */
+        .fc{--fc-border-color:var(--border-color);--fc-button-bg-color:var(--bg-hover);--fc-button-border-color:var(--border-color);--fc-button-text-color:var(--text-primary);--fc-button-hover-bg-color:var(--accent-green);--fc-button-hover-border-color:var(--accent-green);--fc-button-active-bg-color:var(--accent-green);--fc-button-active-border-color:var(--accent-green);--fc-today-bg-color:rgba(34,197,94,0.08);--fc-page-bg-color:var(--bg-card);--fc-neutral-bg-color:var(--bg-secondary);--fc-event-border-color:transparent}
+        .fc .fc-toolbar-title{color:var(--text-primary);font-weight:700}
+        .fc .fc-col-header-cell{background:var(--bg-secondary)}
+        .fc .fc-col-header-cell-cushion{color:var(--text-muted);font-size:12px;font-weight:600;text-transform:uppercase}
+        .fc .fc-daygrid-day-number{color:var(--text-secondary);font-size:13px}
+        .fc .fc-event{border-radius:6px;padding:2px 6px;font-size:12px;font-weight:500;cursor:pointer}
+        @media(max-width:768px){.sidebar{display:none}.main-content{margin-left:0;padding:16px}}
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">🐴</div>
+        <div><h5>Cabalgatas</h5><small>Sistema de Gestión</small></div>
+    </div>
+    <div class="sidebar-nav">
+        <div class="nav-label">Principal</div>
+        <a href="/" class="active"><i class="bi bi-calendar3"></i> Calendario</a>
+        <div class="nav-label">Gestión</div>
+        <a href="/caballos"><i class="bi bi-heart-pulse"></i> Caballos</a>
+        <a href="/guias"><i class="bi bi-people"></i> Guías</a>
+    </div>
+</nav>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="main-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <div>
+            <h2 style="font-weight:700;font-size:24px;margin:0">📅 Calendario de Cabalgatas</h2>
+            <p style="color:var(--text-muted);font-size:13px;margin-top:2px">Gestiona todas las cabalgatas desde el calendario</p>
+        </div>
+        <button class="btn-accent" onclick="openCreateModal()"><i class="bi bi-plus-lg"></i> Nueva Cabalgata</button>
+    </div>
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:20px">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- ===== MODAL: Create/Edit Cabalgata ===== -->
+<div class="modal fade" id="cabalgataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cabalgataModalTitle">Nueva Cabalgata</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editId">
+                <div class="row g-3">
+                    <div class="col-12"><label class="form-label">Fecha</label><input type="date" class="form-control form-control-dark" id="fecha"></div>
+                    <div class="col-6"><label class="form-label">Hora Inicio</label><input type="time" class="form-control form-control-dark" id="horaInicio"></div>
+                    <div class="col-6"><label class="form-label">Hora Fin</label><input type="time" class="form-control form-control-dark" id="horaFin"></div>
+                    <hr style="border-color:var(--border-color)">
+                    <div class="col-12"><label class="form-label">Nombre del Cliente</label><input type="text" class="form-control form-control-dark" id="clienteNombre" placeholder="Ej: Juan Pérez"></div>
+                    <div class="col-6"><label class="form-label">Teléfono</label><input type="text" class="form-control form-control-dark" id="clienteTelefono" placeholder="+54 9 ..."></div>
+                    <div class="col-6"><label class="form-label">Cant. Personas</label><input type="number" class="form-control form-control-dark" id="cantidadPersonas" min="1" value="1"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-accent" onclick="saveCabalgata()"><i class="bi bi-check-lg"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL: Detail ===== -->
+<div class="modal fade" id="detalleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-info-circle"></i> Detalle de Cabalgata</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalleBody">
+                <!-- Filled dynamically -->
+            </div>
+            <div class="modal-footer" style="justify-content:space-between">
+                <button class="btn btn-danger-soft" onclick="deleteCabalgata()"><i class="bi bi-trash3"></i> Eliminar</button>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-ghost" onclick="editCabalgata()"><i class="bi bi-pencil"></i> Editar</button>
+                    <button class="btn btn-ghost" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/es.global.min.js"></script>
+<script>
+// ===== Globals =====
+let calendar;
+let currentCabalgataId = null;
+let currentActiveTab = 'info'; // Track which tab is active
+
+// ===== Toast =====
+function showToast(message, type='success') {
+    const c = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = `toast toast-custom toast-${type} animate-in`;
+    el.setAttribute('role','alert');
+    const icon = type==='success'?'bi-check-circle-fill':'bi-exclamation-triangle-fill';
+    const color = type==='success'?'var(--accent-green)':'var(--accent-red)';
+    el.innerHTML = `<div class="toast-body d-flex align-items-center gap-2 py-3 px-4"><i class="bi ${icon}" style="color:${color}"></i><span>${message}</span></div>`;
+    c.appendChild(el);
+    const t = new bootstrap.Toast(el, {delay:3500});
+    t.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+
+// ===== API =====
+async function apiCall(url, method='GET', data=null) {
+    const opts = {method, headers:{'Content-Type':'application/json'}};
+    if (data) opts.body = JSON.stringify(data);
+    const res = await fetch(url, opts);
+    if (res.status === 204) return {};
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || 'Error del servidor');
+    return json;
+}
+
+// ===== Safe Modal Management (FIX #2: modal freeze) =====
+function safeShowModal(modalId) {
+    const el = document.getElementById(modalId);
+    // Dispose any existing instance first
+    const existing = bootstrap.Modal.getInstance(el);
+    if (existing) existing.dispose();
+    const m = new bootstrap.Modal(el, { backdrop: true, keyboard: true });
+    m.show();
+}
+
+function safeHideModal(modalId) {
+    const el = document.getElementById(modalId);
+    const inst = bootstrap.Modal.getInstance(el);
+    if (inst) {
+        inst.hide();
+        // Clean up after animation
+        el.addEventListener('hidden.bs.modal', function handler() {
+            el.removeEventListener('hidden.bs.modal', handler);
+            // Remove leftover backdrops
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        });
+    }
+}
+
+// ===== Calendar Init =====
+document.addEventListener('DOMContentLoaded', function() {
+    const calEl = document.getElementById('calendar');
+    calendar = new FullCalendar.Calendar(calEl, {
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        headerToolbar: { left:'prev,next today', center:'title', right:'dayGridMonth,timeGridWeek,timeGridDay' },
+        eventSources: [{
+            url: '/api/cabalgatas',
+            method: 'GET',
+            failure: () => showToast('Error cargando eventos', 'error')
+        }],
+        dateClick: function(info) {
+            openCreateModal(info.dateStr);
+        },
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            currentCabalgataId = info.event.id;
+            currentActiveTab = 'info';
+            loadDetalle();
+        },
+        eventTimeFormat: { hour:'2-digit', minute:'2-digit', hour12:false },
+        height: 'auto'
+    });
+    calendar.render();
+
+    // FIX #2: Clean up backdrops on any modal hide
+    document.addEventListener('hidden.bs.modal', function() {
+        setTimeout(() => {
+            if (!document.querySelector('.modal.show')) {
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+        }, 150);
+    });
+});
+
+// ===== Create/Edit Modal =====
+function openCreateModal(dateStr) {
+    document.getElementById('editId').value = '';
+    document.getElementById('cabalgataModalTitle').textContent = 'Nueva Cabalgata';
+    document.getElementById('fecha').value = dateStr || '';
+    document.getElementById('horaInicio').value = '09:00';
+    document.getElementById('horaFin').value = '11:00';
+    document.getElementById('clienteNombre').value = '';
+    document.getElementById('clienteTelefono').value = '';
+    document.getElementById('cantidadPersonas').value = '1';
+    safeShowModal('cabalgataModal');
+}
+
+function editCabalgata() {
+    if (!currentCabalgataId) return;
+    apiCall(`/api/cabalgatas/${currentCabalgataId}`).then(d => {
+        safeHideModal('detalleModal');
+        setTimeout(() => {
+            document.getElementById('editId').value = d.id;
+            document.getElementById('cabalgataModalTitle').textContent = 'Editar Cabalgata';
+            document.getElementById('fecha').value = d.fecha;
+            document.getElementById('horaInicio').value = d.horaInicio;
+            document.getElementById('horaFin').value = d.horaFin;
+            document.getElementById('clienteNombre').value = d.clienteNombre || '';
+            document.getElementById('clienteTelefono').value = d.clienteTelefono || '';
+            document.getElementById('cantidadPersonas').value = d.cantidadPersonas || 1;
+            safeShowModal('cabalgataModal');
+        }, 300);
+    }).catch(err => showToast(err.message, 'error'));
+}
+
+async function saveCabalgata() {
+    const id = document.getElementById('editId').value;
+    const data = {
+        fecha: document.getElementById('fecha').value,
+        horaInicio: document.getElementById('horaInicio').value,
+        horaFin: document.getElementById('horaFin').value,
+        clienteNombre: document.getElementById('clienteNombre').value,
+        clienteTelefono: document.getElementById('clienteTelefono').value,
+        cantidadPersonas: parseInt(document.getElementById('cantidadPersonas').value) || 0
+    };
+    try {
+        if (id) {
+            await apiCall(`/api/cabalgatas/${id}`, 'PUT', data);
+            showToast('Cabalgata actualizada');
+        } else {
+            await apiCall('/api/cabalgatas', 'POST', data);
+            showToast('Cabalgata creada');
+        }
+        safeHideModal('cabalgataModal');
+        calendar.refetchEvents();
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// ===== FIX #1: Delete Cabalgata =====
+async function deleteCabalgata() {
+    if (!currentCabalgataId) return;
+    if (!confirm('¿Estás seguro de eliminar esta cabalgata? Se liberarán los caballos y guías asignados.')) return;
+    try {
+        await apiCall(`/api/cabalgatas/${currentCabalgataId}`, 'DELETE');
+        showToast('Cabalgata eliminada correctamente');
+        safeHideModal('detalleModal');
+        currentCabalgataId = null;
+        calendar.refetchEvents();
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// ===== Detail Modal =====
+async function loadDetalle() {
+    try {
+        const d = await apiCall(`/api/cabalgatas/${currentCabalgataId}`);
+        renderDetalle(d);
+        safeShowModal('detalleModal');
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+function getEstadoStyle(estado) {
+    const map = {
+        BORRADOR: { bg:'rgba(107,114,128,0.15)', color:'#9ca3af', label:'Borrador' },
+        PROGRAMADA: { bg:'rgba(34,197,94,0.15)', color:'#22c55e', label:'Programada' },
+        EN_CURSO: { bg:'rgba(59,130,246,0.15)', color:'#3b82f6', label:'En Curso' },
+        FINALIZADA: { bg:'rgba(108,117,125,0.15)', color:'#6c757d', label:'Finalizada' },
+        CANCELADA: { bg:'rgba(239,68,68,0.15)', color:'#ef4444', label:'Cancelada' }
+    };
+    return map[estado] || map.BORRADOR;
+}
+
+function getEstadoBtnStyle(estado) {
+    const map = {
+        PROGRAMADA: 'background:#22c55e;color:white',
+        EN_CURSO: 'background:#3b82f6;color:white',
+        FINALIZADA: 'background:#6c757d;color:white',
+        CANCELADA: 'background:#ef4444;color:white'
+    };
+    return map[estado] || 'background:var(--bg-hover);color:var(--text-primary)';
+}
+
+function renderDetalle(d) {
+    const es = getEstadoStyle(d.estado);
+    const personas = d.cantidadPersonas || 0;
+
+    // State transition buttons
+    let estadoBtns = '';
+    if (d.estadosPosibles && d.estadosPosibles.length > 0) {
+        estadoBtns = '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">';
+        estadoBtns += '<span style="font-size:12px;color:var(--text-muted);align-self:center">Cambiar a:</span>';
+        d.estadosPosibles.forEach(e => {
+            const label = getEstadoStyle(e).label;
+            estadoBtns += `<button class="estado-btn" style="${getEstadoBtnStyle(e)}" onclick="cambiarEstado('${e}')">${label}</button>`;
+        });
+        estadoBtns += '</div>';
+    }
+
+    let html = `
+    <!-- Stats Row -->
+    <div class="row g-3 mb-3">
+        <div class="col-4"><div class="stat-card"><div class="stat-value">${d.fecha}</div><div class="stat-label">Fecha</div></div></div>
+        <div class="col-3"><div class="stat-card"><div class="stat-value">${d.horaInicio} - ${d.horaFin}</div><div class="stat-label">Horario</div></div></div>
+        <div class="col-2"><div class="stat-card"><div class="stat-value">${personas}</div><div class="stat-label">Personas</div></div></div>
+        <div class="col-3"><div class="stat-card"><span class="badge-estado" style="background:${es.bg};color:${es.color}">${es.label}</span><div class="stat-label mt-1">Estado</div></div></div>
+    </div>
+    ${estadoBtns}
+    <hr style="border-color:var(--border-color)">
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border-color);margin-bottom:16px">
+        <button class="tab-btn ${currentActiveTab==='info'?'active':''}" onclick="switchTab('info')">👤 Cliente</button>
+        <button class="tab-btn ${currentActiveTab==='caballos'?'active':''}" onclick="switchTab('caballos')">🐴 Caballos (${d.caballos.length})</button>
+        <button class="tab-btn ${currentActiveTab==='guias'?'active':''}" onclick="switchTab('guias')">👥 Guías (${d.guias.length})</button>
+    </div>
+
+    <!-- Tab: Cliente Info -->
+    <div id="tab-info" class="tab-panel ${currentActiveTab==='info'?'active':''}">
+        <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:16px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+                <i class="bi bi-person-circle" style="font-size:28px;color:var(--accent-green)"></i>
+                <div>
+                    <div style="font-weight:600;font-size:16px">${d.clienteNombre || 'Sin asignar'}</div>
+                    <div style="font-size:13px;color:var(--text-muted)">${d.clienteTelefono || 'Sin teléfono'}</div>
+                </div>
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:8px">
+                <i class="bi bi-people-fill"></i> ${personas} persona${personas !== 1 ? 's' : ''} en el grupo
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Caballos (FIX #4: stay on this tab after assignment) -->
+    <div id="tab-caballos" class="tab-panel ${currentActiveTab==='caballos'?'active':''}">
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <select class="form-select form-select-dark" id="selectCaballo" style="flex:1"><option value="">Seleccionar caballo...</option></select>
+            <button class="btn btn-accent btn-sm" onclick="asignarCaballo()"><i class="bi bi-plus-lg"></i> Asignar</button>
+        </div>`;
+
+    if (d.caballos.length === 0) {
+        html += `<div style="text-align:center;padding:20px;color:var(--text-muted)"><i class="bi bi-heart-pulse" style="font-size:24px"></i><p style="margin:4px 0 0">Sin caballos asignados</p></div>`;
+    } else {
+        d.caballos.forEach(c => {
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;margin-bottom:6px">
+                <div><strong>${c.nombre}</strong> <span style="color:var(--text-muted);font-size:12px">${c.estado||''}</span></div>
+                <button class="btn btn-danger-soft btn-sm" style="padding:4px 10px;font-size:11px" onclick="removerCaballo(${c.id})"><i class="bi bi-x-lg"></i></button>
+            </div>`;
+        });
+    }
+
+    // Alert: insufficient horses
+    if (personas > 0 && d.caballos.length < personas) {
+        html += `<div style="margin-top:8px;padding:8px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:8px;font-size:12px;color:var(--accent-amber)">
+            <i class="bi bi-exclamation-triangle-fill"></i> Faltan ${personas - d.caballos.length} caballo(s) para cubrir el grupo
+        </div>`;
+    }
+
+    html += `</div>
+
+    <!-- Tab: Guías -->
+    <div id="tab-guias" class="tab-panel ${currentActiveTab==='guias'?'active':''}">
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+            <select class="form-select form-select-dark" id="selectGuia" style="flex:1"><option value="">Seleccionar guía...</option></select>
+            <button class="btn btn-accent btn-sm" onclick="asignarGuia()"><i class="bi bi-plus-lg"></i> Asignar</button>
+        </div>`;
+
+    if (d.guias.length === 0) {
+        html += `<div style="text-align:center;padding:20px;color:var(--text-muted)"><i class="bi bi-people" style="font-size:24px"></i><p style="margin:4px 0 0">Sin guías asignados</p></div>`;
+        html += `<div style="margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:12px;color:var(--accent-red)">
+            <i class="bi bi-exclamation-triangle-fill"></i> Se requiere al menos un guía
+        </div>`;
+    } else {
+        d.guias.forEach(g => {
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;margin-bottom:6px">
+                <div><strong>${g.nombre}</strong> <span style="color:var(--text-muted);font-size:12px">${g.telefono||''}</span></div>
+                <button class="btn btn-danger-soft btn-sm" style="padding:4px 10px;font-size:11px" onclick="removerGuia(${g.id})"><i class="bi bi-x-lg"></i></button>
+            </div>`;
+        });
+    }
+
+    html += `</div>`;
+
+    document.getElementById('detalleBody').innerHTML = html;
+
+    // Load available horses and guides for selects
+    loadCaballosDisponibles();
+    loadGuiasActivos();
+}
+
+function switchTab(tab) {
+    currentActiveTab = tab;
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+        const tabs = ['info','caballos','guias'];
+        b.classList.toggle('active', tabs[i] === tab);
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('tab-' + tab);
+    if (panel) panel.classList.add('active');
+}
+
+// ===== FIX #7: State Transition =====
+async function cambiarEstado(nuevoEstado) {
+    try {
+        await apiCall(`/api/cabalgatas/${currentCabalgataId}/estado`, 'PUT', { estado: nuevoEstado });
+        showToast('Estado cambiado a ' + getEstadoStyle(nuevoEstado).label);
+        calendar.refetchEvents();
+        loadDetalle(); // Refresh detail
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// ===== Caballo Assignment (FIX #4: stay on caballos tab) =====
+async function loadCaballosDisponibles() {
+    try {
+        const caballos = await apiCall('/api/caballos/disponibles');
+        const sel = document.getElementById('selectCaballo');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Seleccionar caballo...</option>';
+        caballos.forEach(c => {
+            sel.innerHTML += `<option value="${c.id}">${c.nombre} ${c.estado ? '('+c.estado+')' : ''}</option>`;
+        });
+    } catch(err) { /* ignore */ }
+}
+
+async function asignarCaballo() {
+    const sel = document.getElementById('selectCaballo');
+    if (!sel || !sel.value) return showToast('Selecciona un caballo', 'error');
+    try {
+        currentActiveTab = 'caballos'; // FIX #4: stay on caballos tab
+        await apiCall(`/api/cabalgatas/${currentCabalgataId}/asignar-caballo/${sel.value}`, 'POST');
+        showToast('Caballo asignado correctamente');
+        calendar.refetchEvents();
+        loadDetalle(); // Reloads detail staying on caballos tab
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function removerCaballo(caballoId) {
+    try {
+        currentActiveTab = 'caballos';
+        await apiCall(`/api/cabalgatas/${currentCabalgataId}/remover-caballo/${caballoId}`, 'DELETE');
+        showToast('Caballo removido');
+        calendar.refetchEvents();
+        loadDetalle();
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// ===== Guía Assignment =====
+async function loadGuiasActivos() {
+    try {
+        const guias = await apiCall('/api/guias/activos');
+        const sel = document.getElementById('selectGuia');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Seleccionar guía...</option>';
+        guias.forEach(g => {
+            sel.innerHTML += `<option value="${g.id}">${g.nombre}</option>`;
+        });
+    } catch(err) { /* ignore */ }
+}
+
+async function asignarGuia() {
+    const sel = document.getElementById('selectGuia');
+    if (!sel || !sel.value) return showToast('Selecciona un guía', 'error');
+    try {
+        currentActiveTab = 'guias';
+        await apiCall(`/api/cabalgatas/${currentCabalgataId}/asignar-guia/${sel.value}`, 'POST');
+        showToast('Guía asignado correctamente');
+        calendar.refetchEvents();
+        loadDetalle();
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function removerGuia(guiaId) {
+    try {
+        currentActiveTab = 'guias';
+        await apiCall(`/api/cabalgatas/${currentCabalgataId}/remover-guia/${guiaId}`, 'DELETE');
+        showToast('Guía removido');
+        calendar.refetchEvents();
+        loadDetalle();
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+</script>
+</body>
+</html>
