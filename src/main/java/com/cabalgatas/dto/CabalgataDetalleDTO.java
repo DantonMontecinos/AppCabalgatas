@@ -16,6 +16,8 @@ public class CabalgataDetalleDTO {
     private List<CaballoDTO> caballos;
     private List<GuiaDTO> guias;
     private List<String> estadosPosibles;
+    private String estadoPago;
+    private int porcentajePagado;
 
     public static class CaballoDTO {
         private Long id;
@@ -75,4 +77,8 @@ public class CabalgataDetalleDTO {
     public void setGuias(List<GuiaDTO> guias) { this.guias = guias; }
     public List<String> getEstadosPosibles() { return estadosPosibles; }
     public void setEstadosPosibles(List<String> estadosPosibles) { this.estadosPosibles = estadosPosibles; }
+    public String getEstadoPago() { return estadoPago; }
+    public void setEstadoPago(String estadoPago) { this.estadoPago = estadoPago; }
+    public int getPorcentajePagado() { return porcentajePagado; }
+    public void setPorcentajePagado(int porcentajePagado) { this.porcentajePagado = porcentajePagado; }
 }

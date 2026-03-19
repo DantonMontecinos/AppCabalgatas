@@ -3,6 +3,7 @@ com\cabalgatas\dto\ReservaDTO.class
 com\cabalgatas\service\CabalgataService.class
 com\cabalgatas\controller\CaballoController.class
 com\cabalgatas\controller\GuiaController.class
+com\cabalgatas\entity\EstadoPago.class
 com\cabalgatas\controller\ReservaController.class
 com\cabalgatas\dto\CabalgataDetalleDTO$CaballoDTO.class
 com\cabalgatas\entity\Reserva.class

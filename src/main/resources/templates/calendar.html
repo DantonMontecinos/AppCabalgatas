@@ -84,6 +84,12 @@
     <div class="sidebar-nav">
         <div class="nav-label">Principal</div>
         <a href="/" class="active"><i class="bi bi-calendar3"></i> Calendario</a>
+        <a href="#" id="enCursoToggle" onclick="event.preventDefault();toggleEnCurso()" style="justify-content:space-between">
+            <span><i class="bi bi-activity"></i> En Curso <span id="enCursoBadge" style="background:var(--accent-blue);color:white;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;margin-left:4px">0</span></span>
+            <i class="bi bi-chevron-down" id="enCursoArrow" style="font-size:12px;transition:transform 0.2s"></i>
+        </a>
+        <div id="enCursoList" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease;padding:0 4px">
+        </div>
         <div class="nav-label">Gestión</div>
         <a href="/caballos"><i class="bi bi-heart-pulse"></i> Caballos</a>
         <a href="/guias"><i class="bi bi-people"></i> Guías</a>
@@ -145,7 +151,7 @@
                 <!-- Filled dynamically -->
             </div>
             <div class="modal-footer" style="justify-content:space-between">
-                <button class="btn btn-danger-soft" onclick="deleteCabalgata()"><i class="bi bi-trash3"></i> Eliminar</button>
+                <button class="btn btn-danger-soft" id="btnDeleteCabalgata" onclick="deleteCabalgata()"><i class="bi bi-trash3"></i> Eliminar</button>
                 <div style="display:flex;gap:8px">
                     <button class="btn btn-ghost" onclick="editCabalgata()"><i class="bi bi-pencil"></i> Editar</button>
                     <button class="btn btn-ghost" data-bs-dismiss="modal">Cerrar</button>
@@ -316,6 +322,15 @@ async function saveCabalgata() {
 async function deleteCabalgata() {
     if (!currentCabalgataId) return;
     if (!confirm('¿Estás seguro de eliminar esta cabalgata? Se liberarán los caballos y guías asignados.')) return;
+
+    const btn = document.getElementById('btnDeleteCabalgata');
+    let oldHtml = '';
+    if (btn) {
+        btn.disabled = true;
+        oldHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Eliminando...';
+    }
+
     try {
         await apiCall(`/api/cabalgatas/${currentCabalgataId}`, 'DELETE');
         showToast('Cabalgata eliminada correctamente');
@@ -324,6 +339,11 @@ async function deleteCabalgata() {
         calendar.refetchEvents();
     } catch(err) {
         showToast(err.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = oldHtml;
+        }
     }
 }
 
@@ -359,8 +379,16 @@ function getEstadoBtnStyle(estado) {
     return map[estado] || 'background:var(--bg-hover);color:var(--text-primary)';
 }
 
+function getEstadoPagoStyle(ep, pct) {
+    if (pct >= 100 || ep === 'PAGADO') return { bg:'rgba(34,197,94,0.15)', color:'#22c55e', label: pct + '% Pagado' };
+    if (pct > 0 || ep === 'PARCIAL') return { bg:'rgba(245,158,11,0.15)', color:'#f59e0b', label: pct + '% Parcial' };
+    return { bg:'rgba(107,114,128,0.15)', color:'#9ca3af', label:'Pendiente' };
+}
+
 function renderDetalle(d) {
     const es = getEstadoStyle(d.estado);
+    const pct = d.porcentajePagado || 0;
+    const ep = getEstadoPagoStyle(d.estadoPago, pct);
     const personas = d.cantidadPersonas || 0;
 
     // State transition buttons
@@ -375,15 +403,29 @@ function renderDetalle(d) {
         estadoBtns += '</div>';
     }
 
+    // Payment input
+    let pagoSection = `
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text-muted)">💰 Pago:</span>
+        <span class="badge-estado" style="background:${ep.bg};color:${ep.color}">${ep.label}</span>
+        <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+            <input type="number" id="inputPorcentaje" min="0" max="100" value="${pct}" class="form-control form-control-dark" style="width:80px;padding:4px 8px;font-size:13px;text-align:center">
+            <span style="font-size:12px;color:var(--text-muted)">%</span>
+            <button class="btn-accent" style="padding:4px 12px;font-size:12px" onclick="actualizarPago()"><i class="bi bi-check-lg"></i></button>
+        </div>
+    </div>`;
+
     let html = `
     <!-- Stats Row -->
     <div class="row g-3 mb-3">
-        <div class="col-4"><div class="stat-card"><div class="stat-value">${d.fecha}</div><div class="stat-label">Fecha</div></div></div>
+        <div class="col-3"><div class="stat-card"><div class="stat-value">${d.fecha}</div><div class="stat-label">Fecha</div></div></div>
         <div class="col-3"><div class="stat-card"><div class="stat-value">${d.horaInicio} - ${d.horaFin}</div><div class="stat-label">Horario</div></div></div>
         <div class="col-2"><div class="stat-card"><div class="stat-value">${personas}</div><div class="stat-label">Personas</div></div></div>
-        <div class="col-3"><div class="stat-card"><span class="badge-estado" style="background:${es.bg};color:${es.color}">${es.label}</span><div class="stat-label mt-1">Estado</div></div></div>
+        <div class="col-2"><div class="stat-card"><span class="badge-estado" style="background:${es.bg};color:${es.color}">${es.label}</span><div class="stat-label mt-1">Estado</div></div></div>
+        <div class="col-2"><div class="stat-card"><span class="badge-estado" style="background:${ep.bg};color:${ep.color}">${ep.label}</span><div class="stat-label mt-1">Pago</div></div></div>
     </div>
     ${estadoBtns}
+    ${pagoSection}
     <hr style="border-color:var(--border-color)">
 
     <!-- Tabs -->
@@ -488,6 +530,84 @@ async function cambiarEstado(nuevoEstado) {
         showToast(err.message, 'error');
     }
 }
+
+// ===== Payment Status =====
+async function actualizarPago() {
+    const input = document.getElementById('inputPorcentaje');
+    if (!input) return;
+    const pct = parseInt(input.value);
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+        showToast('El porcentaje debe estar entre 0 y 100', 'error');
+        return;
+    }
+    try {
+        await apiCall(`/api/cabalgatas/${currentCabalgataId}/estado-pago`, 'PUT', { porcentajePagado: pct });
+        showToast('Pago actualizado: ' + pct + '%');
+        calendar.refetchEvents();
+        loadDetalle();
+        loadEnCurso();
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+// ===== Sidebar: En Curso (collapsible) =====
+let enCursoOpen = false;
+let enCursoInterval = null;
+
+function toggleEnCurso() {
+    enCursoOpen = !enCursoOpen;
+    const list = document.getElementById('enCursoList');
+    const arrow = document.getElementById('enCursoArrow');
+    if (enCursoOpen) {
+        loadEnCurso();
+        list.style.maxHeight = '220px';
+        list.style.overflowY = 'auto';
+        arrow.style.transform = 'rotate(180deg)';
+        enCursoInterval = setInterval(loadEnCurso, 30000);
+    } else {
+        list.style.maxHeight = '0';
+        list.style.overflowY = 'hidden';
+        arrow.style.transform = 'rotate(0deg)';
+        if (enCursoInterval) { clearInterval(enCursoInterval); enCursoInterval = null; }
+    }
+}
+
+async function loadEnCurso() {
+    try {
+        const items = await apiCall('/api/cabalgatas/en-curso');
+        const container = document.getElementById('enCursoList');
+        const badge = document.getElementById('enCursoBadge');
+        if (!container) return;
+        badge.textContent = items.length;
+
+        if (items.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:12px">Sin cabalgatas en curso</div>';
+            return;
+        }
+
+        container.innerHTML = items.map(c => {
+            const pct = c.porcentajePagado || 0;
+            const ep = getEstadoPagoStyle(c.estadoPago, pct);
+            return `<a href="#" onclick="event.preventDefault();currentCabalgataId=${c.id};currentActiveTab='info';loadDetalle()" style="display:block;padding:8px 10px;margin-bottom:4px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;text-decoration:none;color:var(--text-primary);transition:all 0.2s;font-size:12px" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='var(--bg-primary)'">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <strong style="font-size:12px">${c.clienteNombre}</strong>
+                    <span class="badge-estado" style="background:${ep.bg};color:${ep.color};font-size:9px;padding:2px 6px">${ep.label}</span>
+                </div>
+                <div style="color:var(--text-muted);font-size:11px;margin-top:2px">
+                    <i class="bi bi-clock"></i> ${c.horaInicio} - ${c.horaFin} · ${c.cantidadPersonas} pers.
+                </div>
+            </a>`;
+        }).join('');
+    } catch(err) { /* silent */ }
+}
+
+// Load badge count on init (but don't expand)
+document.addEventListener('DOMContentLoaded', () => {
+    apiCall('/api/cabalgatas/en-curso').then(items => {
+        document.getElementById('enCursoBadge').textContent = items.length;
+    }).catch(() => {});
+});
 
 // ===== Caballo Assignment (FIX #4: stay on caballos tab) =====
 async function loadCaballosDisponibles() {

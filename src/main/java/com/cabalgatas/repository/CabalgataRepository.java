@@ -1,6 +1,7 @@
 package com.cabalgatas.repository;
 
 import com.cabalgatas.entity.Cabalgata;
+import com.cabalgatas.entity.EstadoCabalgata;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,4 +27,6 @@ public interface CabalgataRepository extends JpaRepository<Cabalgata, Long> {
             @Param("horaInicio") LocalTime horaInicio,
             @Param("horaFin") LocalTime horaFin,
             @Param("cabalgataId") Long cabalgataId);
+
+    List<Cabalgata> findByEstado(EstadoCabalgata estado);
 }

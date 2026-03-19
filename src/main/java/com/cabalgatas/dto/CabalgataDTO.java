@@ -13,6 +13,7 @@ public class CabalgataDTO {
     private String clienteNombre;
     private String clienteTelefono;
     private Integer cantidadPersonas;
+    private Integer porcentajePagado;
 
     public CabalgataDTO() {}
 
@@ -39,4 +40,7 @@ public class CabalgataDTO {
 
     public Integer getCantidadPersonas() { return cantidadPersonas; }
     public void setCantidadPersonas(Integer cantidadPersonas) { this.cantidadPersonas = cantidadPersonas; }
+
+    public Integer getPorcentajePagado() { return porcentajePagado; }
+    public void setPorcentajePagado(Integer porcentajePagado) { this.porcentajePagado = porcentajePagado; }
 }

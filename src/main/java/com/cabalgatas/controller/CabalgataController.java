@@ -96,7 +96,12 @@ public class CabalgataController {
     @DeleteMapping("/api/cabalgatas/{id}")
     @ResponseBody
     public ResponseEntity<Map<String, String>> eliminar(@PathVariable Long id) {
-        cabalgataService.eliminar(id);
+        try {
+            cabalgataService.eliminar(id);
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            // Ya estaba eliminada, se considera exitoso para hacer el endpoint idempotente
+            return ResponseEntity.ok(Map.of("message", "Cabalgata eliminada correctamente"));
+        }
         return ResponseEntity.ok(Map.of("message", "Cabalgata eliminada correctamente"));
     }
 
@@ -139,5 +144,24 @@ public class CabalgataController {
     public ResponseEntity<Map<String, String>> removerGuia(@PathVariable Long id, @PathVariable Long guiaId) {
         cabalgataService.removerGuia(id, guiaId);
         return ResponseEntity.ok(Map.of("message", "Guía removido correctamente"));
+    }
+
+    // ===== Payment Status =====
+    @PutMapping("/api/cabalgatas/{id}/estado-pago")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> actualizarPago(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        int porcentaje = body.get("porcentajePagado") != null
+                ? ((Number) body.get("porcentajePagado")).intValue() : 0;
+        cabalgataService.actualizarPago(id, porcentaje);
+        return ResponseEntity.ok(Map.of("message", "Estado de pago actualizado"));
+    }
+
+    // ===== En Curso List =====
+    @GetMapping("/api/cabalgatas/en-curso")
+    @ResponseBody
+    public List<Map<String, Object>> listarEnCurso() {
+        return cabalgataService.listarEnCurso();
     }
 }

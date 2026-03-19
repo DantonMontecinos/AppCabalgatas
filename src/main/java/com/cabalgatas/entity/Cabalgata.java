@@ -30,6 +30,13 @@ public class Cabalgata {
     @Enumerated(EnumType.STRING)
     private EstadoCabalgata estado = EstadoCabalgata.BORRADOR;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pago")
+    private EstadoPago estadoPago = EstadoPago.PENDIENTE;
+
+    @Column(name = "porcentaje_pagado")
+    private Integer porcentajePagado = 0;
+
     // === Client Info (1 cabalgata = 1 client/group) ===
     @Column(name = "cliente_nombre")
     private String clienteNombre;
@@ -62,6 +69,17 @@ public class Cabalgata {
     // === Helper Methods ===
     public int getTotalPersonas() {
         return cantidadPersonas != null ? cantidadPersonas : 0;
+    }
+
+    public int getPorcentajePagadoSafe() {
+        return porcentajePagado != null ? porcentajePagado : 0;
+    }
+
+    public EstadoPago calcularEstadoPago() {
+        int pct = getPorcentajePagadoSafe();
+        if (pct <= 0) return EstadoPago.PENDIENTE;
+        if (pct >= 100) return EstadoPago.PAGADO;
+        return EstadoPago.PARCIAL;
     }
 
     public boolean tieneSolapamiento(Cabalgata otra) {
@@ -100,4 +118,13 @@ public class Cabalgata {
 
     public Set<Guia> getGuias() { return guias; }
     public void setGuias(Set<Guia> guias) { this.guias = guias; }
+
+    public EstadoPago getEstadoPago() { return estadoPago; }
+    public void setEstadoPago(EstadoPago estadoPago) { this.estadoPago = estadoPago; }
+
+    public Integer getPorcentajePagado() { return porcentajePagado; }
+    public void setPorcentajePagado(Integer porcentajePagado) {
+        this.porcentajePagado = porcentajePagado;
+        this.estadoPago = calcularEstadoPago();
+    }
 }

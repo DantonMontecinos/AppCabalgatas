@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -56,6 +57,10 @@ public class CabalgataService {
         cabalgata.setClienteTelefono(dto.getClienteTelefono());
         cabalgata.setCantidadPersonas(dto.getCantidadPersonas());
 
+        if (dto.getPorcentajePagado() != null) {
+            cabalgata.setPorcentajePagado(dto.getPorcentajePagado());
+        }
+
         return cabalgataRepository.save(cabalgata);
     }
 
@@ -73,6 +78,10 @@ public class CabalgataService {
         cabalgata.setClienteNombre(dto.getClienteNombre());
         cabalgata.setClienteTelefono(dto.getClienteTelefono());
         cabalgata.setCantidadPersonas(dto.getCantidadPersonas());
+
+        if (dto.getPorcentajePagado() != null) {
+            cabalgata.setPorcentajePagado(dto.getPorcentajePagado());
+        }
 
         if (dto.getEstado() != null) {
             cabalgata.setEstado(dto.getEstado());
@@ -117,6 +126,20 @@ public class CabalgataService {
         List<EstadoCabalgata> permitidos = getEstadosPosibles(estadoActual);
         if (!permitidos.contains(nuevoEstado)) {
             throw new ValidacionException("No se puede cambiar de " + estadoActual + " a " + nuevoEstado);
+        }
+
+        // VALIDATION: Prevent transition to EN_CURSO if missing assigned horses OR guides
+        if (nuevoEstado == EstadoCabalgata.EN_CURSO) {
+            boolean sinCaballos = cabalgata.getCaballos().isEmpty();
+            boolean sinGuias = cabalgata.getGuias().isEmpty();
+
+            if (sinCaballos && sinGuias) {
+                throw new ValidacionException("No se puede dar curso a la cabalgata si no tiene caballos ni guías asignados");
+            } else if (sinCaballos) {
+                throw new ValidacionException("No se puede dar curso a la cabalgata si no tiene caballos asignados");
+            } else if (sinGuias) {
+                throw new ValidacionException("No se puede dar curso a la cabalgata si no tiene guías asignados");
+            }
         }
 
         cabalgata.setEstado(nuevoEstado);
@@ -228,6 +251,8 @@ public class CabalgataService {
         dto.setHoraInicio(c.getHoraInicio());
         dto.setHoraFin(c.getHoraFin());
         dto.setEstado(c.getEstado().name());
+        dto.setEstadoPago(c.getEstadoPago() != null ? c.getEstadoPago().name() : "PENDIENTE");
+        dto.setPorcentajePagado(c.getPorcentajePagadoSafe());
         dto.setClienteNombre(c.getClienteNombre());
         dto.setClienteTelefono(c.getClienteTelefono());
         dto.setCantidadPersonas(c.getTotalPersonas());
@@ -282,6 +307,36 @@ public class CabalgataService {
             case FINALIZADA -> "#6c757d";
             case CANCELADA -> "#dc3545";
         };
+    }
+
+    // ========== Estado de Pago ==========
+
+    public Cabalgata actualizarPago(Long id, int porcentaje) {
+        if (porcentaje < 0 || porcentaje > 100) {
+            throw new ValidacionException("El porcentaje debe estar entre 0 y 100");
+        }
+        Cabalgata cabalgata = obtenerPorId(id);
+        cabalgata.setPorcentajePagado(porcentaje);
+        return cabalgataRepository.save(cabalgata);
+    }
+
+    // ========== Cabalgatas En Curso ==========
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listarEnCurso() {
+        List<Cabalgata> enCurso = cabalgataRepository.findByEstado(EstadoCabalgata.EN_CURSO);
+        return enCurso.stream().map(c -> {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("id", c.getId());
+            item.put("fecha", c.getFecha());
+            item.put("horaInicio", c.getHoraInicio());
+            item.put("horaFin", c.getHoraFin());
+            item.put("clienteNombre", c.getClienteNombre() != null ? c.getClienteNombre() : "Sin cliente");
+            item.put("cantidadPersonas", c.getTotalPersonas());
+            item.put("estadoPago", c.getEstadoPago() != null ? c.getEstadoPago().name() : "PENDIENTE");
+            item.put("porcentajePagado", c.getPorcentajePagadoSafe());
+            return item;
+        }).collect(Collectors.toList());
     }
 
     // ========== Validaciones ==========
